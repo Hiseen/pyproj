@@ -21,99 +21,143 @@ class derivator(object):
         assert all(not _symboldict_reserved in i for i in kwargs),"any word contains '{}' cannot be a vaild variable name".format(_symboldict_reserved)
         self.vars=[i for i in args]
         self.exps={i:kwargs[i] for i in kwargs}
-        
+        self.symboldict={}
     def get_derivative(self,str_exp):
+        self.symboldict={}
         IsMulVars=[re.search(i,str_exp) for i in self.vars].count(None)!=len(self.vars)-1
         if IsMulVars:
             #for every var, output a derivative
             pass
         else:
-            return self.recursive_helper(*self.split_exp(str_exp))
+            return self.recursive_helper(self.split_exp(str_exp))
             
-            
-    def recursive_helper(self,sd,key):
+    def recursive_helper(self,key):
         if not key:
             return ''
-        if not key in sd:
+        if not key in self.symboldict:
             if key in self.vars:
                 return '1';
             else:
                 return '0';
-        op=sd[key][1]
-        if (op=='+' or op=='-') and not sd[key][0]:
-            return op+self.recursive_helper(sd,sd[key][2])
+        left,op,right=self.symboldict[key]
+        if (op=='+' or op=='-'):
+            return self.combiner(self.recursive_helper(left),op,self.recursive_helper(right))
         elif op=='*':
-            return self.recursive_helper(sd,sd[key][0])+'*'+self.recursive_get_exp(sd,sd[key][2])+'+'+\
-                   self.recursive_helper(sd,sd[key][2])+'*'+self.recursive_get_exp(sd,sd[key][0])
+            return self.combiner(self.combiner(self.recursive_helper(left),'*',self.recursive_get_exp(right)),'+',\
+                   self.combiner(self.recursive_helper(right),'*',self.recursive_get_exp(left)))
         elif op=='/':
-            return '('+self.recursive_helper(sd,sd[key][0])+'*'+self.recursive_get_exp(sd,sd[key][2])+'-'+\
-                   self.recursive_helper(sd,sd[key][2])+'*'+self.recursive_get_exp(sd,sd[key][0])+')/'+self.recursive_get_exp(sd,sd[key][2])+'**2'
-        elif (op=='+'or op=='-'):
-            return self.recursive_helper(sd,sd[key][0])+op+self.recursive_helper(sd,sd[key][2])
+            return self.combiner(self.combiner(self.combiner(self.recursive_helper(left),'*',self.recursive_get_exp(right)),'-',\
+                   self.combiner(self.recursive_helper(right),'*',self.recursive_get_exp(left))),'/',self.combiner(self.recursive_get_exp(right),'^','2'))
         elif op=='^':
-            f="math.e**({}*math.log({}))".format(self.recursive_get_exp(sd,sd[key][2]),self.recursive_get_exp(sd,sd[key][0]))
-            sd=self.symboldict_add(sd,(None,'log',sd[key][0]))
-            key1=_symboldict_reserved+str(len(sd))
-            sd=self.symboldict_add(sd,(sd[key][2],'*',key1))
-            return f+'*('+self.recursive_helper(sd,_symboldict_reserved+str(len(sd)))+')'
+            n=self.is_num(right)
+            if n:
+                return self.combiner(str(n),'*',self.combiner(left,'^',str(n-1)))
+            else:
+                f=self.combiner(self.recursive_get_exp(left),'^',self.recursive_get_exp(right))
+                key=self.symboldict_add((None,'log',left))
+                key=self.symboldict_add((right,'*',key))
+                return self.combiner(f,'*',self.recursive_helper(key))
         elif op=='sin':
-            return 'math.cos('+self.recursive_get_exp(sd,sd[key][2])+')*('+self.recursive_helper(sd,sd[key][2])+')'
+            return self.combiner(self.combiner(None,'cos',self.recursive_get_exp(right)),'*',self.recursive_helper(right))
         elif op=='cos':
-            return '-math.sin('+self.recursive_get_exp(sd,sd[key][2])+')*('+self.recursive_helper(sd,sd[key][2])+')'
+            return self.combiner(None,'-',self.combiner(self.combiner(None,'sin',self.recursive_get_exp(right)),'*',self.recursive_helper(right)))
         elif op=='tan':
-            return self.recursive_helper(sd,sd[key][2])+'*math.sec({})**2'.format(self.recursive_get_exp(sd,sd[key][2]))
+            return self.combiner(self.recursive_helper(right),'*','math.sec({})**2'.format(self.recursive_get_exp(right)))
         elif op=='log':
-            return self.recursive_helper(sd,sd[key][2])+'*(1/{})'.format(self.recursive_get_exp(sd,sd[key][2]))
+            return self.combiner(self.recursive_helper(right),'*',self.combiner('1','/',self.recursive_get_exp(right)))
         else:
             raise NotImplementedError
 
-    def symboldict_add(self,sd,value):
-        key=_symboldict_reserved+str(len(sd)+1)
-        sd[key]=value
-        return sd
+    def is_num(self,str):
+        try:
+            num=eval(str)
+            if isinstance(num,int) or isinstance(num,float):
+                return num
+            else:
+                return False
+        except:
+            return False
 
 
-    def recursive_get_exp(self,sd,key):
+    def combiner(self,left,op,right):
+        if right:
+            for i in right:
+                if i in _operators:
+                    if _precedence[i]<_precedence[op]:
+                        right='('+right+')'
+                        break
+        if left:
+            for i in left:
+                if i in _operators:
+                    if _precedence[i]<_precedence[op]:
+                        left='('+left+')'
+                        break
+        if op=='*':
+            if left=='0' or right=='0' or left=='' or right=='':
+                return ''
+            elif left=='1':
+                return right
+            elif right=='1':
+                return left
+        elif op=='/':
+            assert right!='0' and right!=''
+            if left=='0' or left=='':
+                return ''
+        elif op=='+':
+            if not left or left=='0' or left=='':
+                return right
+            elif right=='0' or right=='':
+                return left
+        elif op=='-':
+            if not left or left=='0' or left=='':
+                return op+right
+            elif right=='0' or right=='':
+                return left
+        elif op=='^':
+            assert (left!='0' and left!='') or (right!='0' and right!='')
+            if left=='0':
+                return '0'
+            elif right=='0':
+                return '1'
+            elif left=='1':
+                return '1'
+            elif right=='1':
+                return left
+            else:
+                return left+'**'+right
+        elif op in _functions:
+            return 'math.{}({})'.format(op,right if not right.startswith('(') else right[1:-1])
+        else:
+            raise NotImplementedError
+        
+        return left+op+right
+
+
+    def symboldict_add(self,value):
+        key=_symboldict_reserved+str(len(self.symboldict)+1)
+        self.symboldict[key]=value
+        return key
+
+
+    def recursive_get_exp(self,key):
         if not key:
             return ''
         elif key in self.vars:
             return key
-        try:
-            if isinstance(eval(key),float) or isinstance(eval(key),int):
-                return key
-        except:
+        elif self.is_num(key):
+            return key
+        else:
             result=''
-            endflag=False
-            if sd[key][0] in sd:
-                result+='('+self.recursive_get_exp(sd,sd[key][0])+')'
-            else:
-                result+=sd[key][0] if sd[key][0] else ''
-            if sd[key][1] in _operators:
-                if sd[key][1]=='^':
-                    result+='**'
-                else:
-                    result+=sd[key][1]
-            elif sd[key][1] in _functions:
-                result+='math.'+sd[key][1]+'('
-                endflag=True
-            if sd[key][2] in sd:
-                result+='('+self.recursive_get_exp(sd,sd[key][2])+')'
-            else:
-                result+=sd[key][2]
-            if endflag:
-                result+=')'
-            return result
-
-
-
-
-
-
+            left,op,right=self.symboldict[key]
+            if left in self.symboldict:
+                left=self.recursive_get_exp(left)
+            if right in self.symboldict:
+                right=self.recursive_get_exp(right)
+            return self.combiner(left,op,right)
            
     def split_exp(self,str_exp):
         tempRPN=self.generate_RPN(str_exp)
         stack=[]
-        symboldict={}
         last=''
         for i in tempRPN:
             if isinstance(i,tuple):
@@ -128,11 +172,9 @@ class derivator(object):
                     data=(stack.pop(),i,temp)
                 elif i in _functions:
                     data=(None,i,temp)
-                key=_symboldict_reserved+str(len(symboldict)+1)
-                symboldict[key]=data
-                last=key
-                stack.append(key)
-        return symboldict,last    
+                last=self.symboldict_add(data)
+                stack.append(last)
+        return last    
 
     def generate_RPN(self,str_exp):
         stack=[]
@@ -185,4 +227,15 @@ class derivator(object):
                             
                 
 a=derivator('x','z',y='1000*2000')
-print(a.get_derivative('sin(2*(x^(x/100)))'))
+t=a.get_derivative('sin(x^((2*x+50*x)/(100-x)))')
+print(t)
+f1=eval('lambda x:'+t)
+f2=eval('lambda x:'+input())
+for i in range(1,30):
+    print(f1(i),f2(i))
+
+
+
+
+
+
