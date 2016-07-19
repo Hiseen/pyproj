@@ -80,41 +80,45 @@ class derivator(object):
 
 
     def combiner(self,left,op,right):
-        if right:
-            for i in right:
-                if i in _operators:
-                    if _precedence[i]<_precedence[op]:
-                        right='('+right+')'
-                        break
-        if left:
-            for i in left:
-                if i in _operators:
-                    if _precedence[i]<_precedence[op]:
-                        left='('+left+')'
-                        break
+        if self.is_num(left) and self.is_num(right):
+            return str(eval(left+op+right)) if op!='^' else str(eval(left+'**'+right))
         if op=='*':
-            if left=='0' or right=='0' or left=='' or right=='':
-                return ''
+            if left=='0' or right=='0':
+                return '0'
             elif left=='1':
                 return right
             elif right=='1':
                 return left
+            elif left=='-1':
+                return '-'+right
+            elif right=='-1':
+                return '-'+left
+            elif left==right:
+                return left+'**2'
         elif op=='/':
-            assert right!='0' and right!=''
-            if left=='0' or left=='':
-                return ''
+            assert right!='0'
+            if left=='0':
+                return '0'
+            elif left==right:
+                return '1'
         elif op=='+':
-            if not left or left=='0' or left=='':
+            if not left or left=='0':
                 return right
-            elif right=='0' or right=='':
+            elif right=='0':
                 return left
+            elif left==right:
+                return '2*'+left
         elif op=='-':
-            if not left or left=='0' or left=='':
-                return op+right
-            elif right=='0' or right=='':
+            if not left or left=='0':
+                return op+right if right[0]!='-' else right[1:]
+            elif right[0]=='-':
+                return left+'+'+right[1:]
+            elif right=='0':
                 return left
+            elif left==right:
+                return'0'
         elif op=='^':
-            assert (left!='0' and left!='') or (right!='0' and right!='')
+            assert left!='0' or right!='0'
             if left=='0':
                 return '0'
             elif right=='0':
@@ -123,14 +127,22 @@ class derivator(object):
                 return '1'
             elif right=='1':
                 return left
-            else:
-                return left+'**'+right
         elif op in _functions:
             return 'math.{}({})'.format(op,right if not right.startswith('(') else right[1:-1])
         else:
             raise NotImplementedError
         
-        return left+op+right
+        for i in right:
+            if i in _operators:
+                if _precedence[i]<_precedence[op]:
+                    right='('+right+')'
+                    break
+        for i in left:
+            if i in _operators:
+                if _precedence[i]<_precedence[op]:
+                    left='('+left+')'
+                    break
+        return left+op+right if op!='^' else left+'**'+right
 
 
     def symboldict_add(self,value):
@@ -140,9 +152,7 @@ class derivator(object):
 
 
     def recursive_get_exp(self,key):
-        if not key:
-            return ''
-        elif key in self.vars:
+        if key in self.vars:
             return key
         elif self.is_num(key):
             return key
@@ -227,7 +237,7 @@ class derivator(object):
                             
                 
 a=derivator('x','z',y='1000*2000')
-t=a.get_derivative('sin(x^((2*x+50*x)/(100-x)))')
+t=a.get_derivative('2*x*x+x*2*x+x*x*2')
 print(t)
 f1=eval('lambda x:'+t)
 f2=eval('lambda x:'+input())
