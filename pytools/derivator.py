@@ -22,14 +22,25 @@ class derivator(object):
         self.vars=[i for i in args]
         self.exps={i:kwargs[i] for i in kwargs}
         self.symboldict={}
-    def get_derivative(self,str_exp):
+        self.stored_derivative=None
+    def get_derivative(self,str_exp,itertimes=1):
+        assert isinstance(itertimes,int) and itertimes>=1
         self.symboldict={}
         IsMulVars=[re.search(i,str_exp) for i in self.vars].count(None)!=len(self.vars)-1
         if IsMulVars:
-            #for every var, output a derivative
-            pass
+            raise NotImplementedError
         else:
-            return self.recursive_helper(self.split_exp(str_exp))
+            result=self.recursive_helper(self.split_exp(str_exp))
+            for i in range(itertimes-1):
+                result=self.recursive_helper(self.split_exp(result))
+            self.stored_derivative=eval('lambda x:'+result)
+            return result
+
+    def calc_derivative(self,**kwargs):
+        if self.stored_derivative:
+            return self.stored_derivative(**kwargs)
+        else:
+            raise ValueError
             
     def recursive_helper(self,key):
         if not key:
@@ -237,7 +248,7 @@ class derivator(object):
                             
                 
 a=derivator('x','z',y='1000*2000')
-t=a.get_derivative('2*x*x+x*2*x+x*x*2')
+t=a.get_derivative('2*x*x+x*2*x+x*x*2',2)
 print(t)
 f1=eval('lambda x:'+t)
 f2=eval('lambda x:'+input())
