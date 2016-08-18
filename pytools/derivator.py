@@ -426,13 +426,7 @@ class derivator(object):
                             final_stack.append(stack.pop())
                         stack.append(Symbol(char,'op'))
                     else:
-                        for k in self.vars:
-                            if str_exp[i:i+len(k)]==k:
-                                final_stack(Symbol(k,'var_num'))
-                                flag=True
-                                break
-                        if not flag:
-                            raise SyntaxError
+                        raise SyntaxError
                 i+=1
         stack.reverse()
         final_stack.extend(stack)
