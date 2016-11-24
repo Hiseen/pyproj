@@ -1,8 +1,0 @@
-u m c
-u l
-u w s
-u l
-u w s
-u w b
-u w b
-u w b

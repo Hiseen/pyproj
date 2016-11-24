@@ -1,3 +1,0 @@
-start;0;start;1;start;0;near
-near;1;end
-end
