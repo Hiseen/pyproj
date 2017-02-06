@@ -192,14 +192,16 @@ if __name__=="__main__":
     count_MCT_win=0
     count_Random_win=0
     count=0
+    print("load start...")
+    MCTAI=MCT_Node.load()
+    print("load finished...")
+    root=MCTAI
     MMAI=MinMax_AI((8,8))
     while True:
         print("game {} start...".format(count+1))
         first=random.choice(["W","B"])
         initdata=(8,8,first,random.choice(["W","B"]),'>')
         game=Othello_Game(initdata,False)
-        MCTAI=MCT_Node.load()
-        root=MCTAI
         count_drop=0
         i=random.choice([0,1])
         if i==0:
@@ -208,9 +210,13 @@ if __name__=="__main__":
             MMAI_turn=Opposite[first]
         while not game.isover:
             if game.turn==MMAI_turn:
-                temp=MMAI.AI_move_input(game)
+                if count_drop<8:
+                    temp=random.choice(game.vaildpos)
+                    print("Random :{} player drop {}".format(game.turn,temp))
+                else:
+                    temp=MMAI.AI_move_input(game)
+                    print("MM:{} player drop {}".format(game.turn,temp))
                 MCTAI=MCTAI.get_next(temp)
-                print("MM :{} player drop {}".format(game.turn,temp))
                 game.drop(temp)
             else:
                 temp=MCTAI.MCTS(game)
@@ -223,6 +229,8 @@ if __name__=="__main__":
         else:
             count_MCT_win+=1
         count+=1
+        print("winner is {}".format(game.get_winner()))
         print('\nMCT: win:{} count:{} win_rate:{}'.format(count_MCT_win,count,count_MCT_win/count))
         print('MM: win:{} count:{} win_rate:{}'.format(count_MM_win,count,count_MM_win/count))
         root.save()
+        MCTAI=root

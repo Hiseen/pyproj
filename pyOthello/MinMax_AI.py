@@ -40,7 +40,7 @@ class MinMax_AI:
         '''init some attributes for AI'''
         NUM_OF_ROWS,NUM_OF_COLS=data
         self.AI_timer=0
-        self.AI_max_time=5
+        self.AI_max_time=50
         self.AI_base_depth=1
         self.AI_simple_eval=True if NUM_OF_ROWS*NUM_OF_COLS==16 else False
         self.AI_timer_start=0
